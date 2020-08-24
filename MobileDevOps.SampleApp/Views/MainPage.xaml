@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://xamarin.com/schemas/2014/forms"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewModels="clr-namespace:MobileDevOps.SampleApp.ViewModels;assembly=MobileDevOps.SampleApp"
+    x:Class="MobileDevOps.SampleApp.Views.MainPage"
+    x:DataType="viewModels:MainPageViewModel"
+    Title="{Binding Title}">
+
+    <StackLayout Padding="20">
+        <Label Text="API Base URL:" FontAttributes="Bold" />
+        <Label Text="{Binding ApplicationSettings.ApiBaseUrl}" />
+
+        <Label Margin="0,20,0,0" Text="App Center Key (Android):" FontAttributes="Bold" />
+        <Label Text="{Binding ApplicationSettings.AppCenterKeyForAndroid}" />
+
+        <Label Margin="0,20,0,0" Text="App Center Key (iOS):" FontAttributes="Bold" />
+        <Label Text="{Binding ApplicationSettings.AppCenterKeyForIOS}" />
+
+        <Label Margin="0,20,0,0" Text="App Center Log Level:" FontAttributes="Bold" />
+        <Label Text="{Binding ApplicationSettings.AppCenterLogLevel}" />
+    </StackLayout>
+</ContentPage>

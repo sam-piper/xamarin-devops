@@ -1,0 +1,147 @@
+jobs:
+
+- job: Android
+  
+  pool:
+    vmImage: 'windows-2019'
+
+  variables:
+  - group: 'CI-Build'
+  - name: IsMainBranch
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+
+  steps:
+
+  # Restore full solution and run tests
+  - task: NuGetToolInstaller@1
+    displayName: 'Install NuGet'
+
+  - task: VSBuild@1
+    displayName: 'Restore Packages'
+    inputs:
+      solution: '**/$(SolutionName)'
+      configuration: '$(BuildConfiguration)'
+      vsVersion: '16.0'
+      msbuildArgs: '/t:Restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: "Run Tests"
+    inputs:
+      command: test
+      projects: '**/*.Tests/*.csproj'
+      arguments: '-c $(BuildConfiguration) --no-restore'
+
+  # Build Android package
+  - task: android-manifest-version@1
+    displayName: 'Update Android Version Number'
+    inputs:
+      sourcePath: '$(AndroidManifestPath)'
+      versionCodeOption: 'buildid'
+      versionCode: '$(Build.BuildId)'
+      printFile: true
+
+  - task: XamarinAndroid@1
+    displayName: 'Build Android Package (Release)'
+    inputs:
+      projectFile: '**/*.Android/*.csproj'
+      outputDirectory: '$(Build.BinariesDirectory)'
+      configuration: 'Release'
+      msbuildVersionOption: '16.0'
+
+  - task: CopyFiles@2
+    displayName: 'Copy APK to Staging Directory'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      sourceFolder: '$(Build.BinariesDirectory)' 
+      contents: '**/*.apk'
+      targetFolder: $(Build.ArtifactStagingDirectory)
+  
+  # Publish Android package for main branch builds
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Build Artifacts'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: 'Android'
+
+- job: iOS
+  dependsOn: Android
+
+  pool:
+    vmImage: 'macOS-latest'
+
+  variables:
+  - group: 'CI-Build'
+  - name: IsMainBranch
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+  
+  steps:
+  
+  - task: UseDotNet@2
+    displayName: 'Install .NET Core SDK'
+    inputs:
+      packageType: sdk
+      version: $(DotNetCoreVersion)
+  
+  - script: sudo $AGENT_HOMEDIRECTORY/scripts/select-xamarin-sdk.sh $(MonoVersion) 
+    displayName: 'Select Xamarin SDK Version'
+
+  - task: InstallAppleCertificate@2
+    displayName: 'Install Apple Signing Identity'
+    inputs:
+      certSecureFile: 'Mobile_DevOps_AdHoc_Certificate.p12'
+      certPwd: '$(AppleCertificatePassword)'
+      keychain: 'temp'
+      deleteCert: true 
+     
+  - task: InstallAppleProvisioningProfile@1
+    displayName: 'Install Apple Provisioning Profile'
+    inputs:
+      provisioningProfileLocation: 'secureFiles'
+      provProfileSecureFile: 'Mobile_DevOps_AdHoc.mobileprovision'
+      removeProfile: true
+
+  - task: NuGetToolInstaller@1
+    displayName: 'Install NuGet'
+
+  - task: NuGetCommand@2
+    displayName: 'Restore NuGet Packages'
+    inputs:
+      restoreSolution: '**/$(SolutionName)'
+
+  - task: ios-bundle-version@1
+    displayName: 'Update iOS Version Number'
+    inputs:
+      sourcePath: '$(AppleSettingsFileName)'
+      versionCodeOption: 'buildid'
+      versionCode: '$(Build.BuildId)'
+      printFile: true
+
+  - task: XamariniOS@2
+    displayName: 'Build iOS Package'
+    inputs:
+      solutionFile: '**/*.iOS/*.csproj'
+      configuration: 'Release'
+      buildForSimulator: false
+      packageApp: $(IsMainBranch)
+      runNugetRestore: false
+      args: '/p:OutputPath="$(Build.BinariesDirectory)"'
+      signingIdentity: '$(APPLE_CERTIFICATE_SIGNING_IDENTITY)'
+      signingProvisioningProfileID: '$(APPLE_PROV_PROFILE_UUID)'
+
+  - task: CopyFiles@2
+    displayName: 'Copy IPA to Staging Directory'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      sourceFolder: '$(Build.BinariesDirectory)' 
+      contents: |
+        **/*.ipa
+        **/*.dSYM/**
+      targetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Build Artifacts'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: 'iOS'
