@@ -77,15 +77,18 @@ jobs:
   
   steps:
   
+  # Install .NET Core SDK
   - task: UseDotNet@2
     displayName: 'Install .NET Core SDK'
     inputs:
       packageType: sdk
       version: $(DotNetCoreVersion)
   
+  # Select Mono SDK Version used by Xamarin
   - script: sudo $AGENT_HOMEDIRECTORY/scripts/select-xamarin-sdk.sh $(MonoVersion) 
     displayName: 'Select Xamarin SDK Version'
 
+  # Install Signing Certificate and Provisioning Profile
   - task: InstallAppleCertificate@2
     displayName: 'Install Apple Signing Identity'
     inputs:
@@ -101,6 +104,7 @@ jobs:
       provProfileSecureFile: 'Mobile_DevOps_AdHoc.mobileprovision'
       removeProfile: true
 
+  # Install NuGet and Restore Solution
   - task: NuGetToolInstaller@1
     displayName: 'Install NuGet'
 
@@ -109,6 +113,7 @@ jobs:
     inputs:
       restoreSolution: '**/$(SolutionName)'
 
+  # Update iOS Version
   - task: ios-bundle-version@1
     displayName: 'Update iOS Version Number'
     inputs:
@@ -117,6 +122,7 @@ jobs:
       versionCode: '$(Build.BuildId)'
       printFile: true
 
+  # Build and Sign IPA file from iOS project
   - task: XamariniOS@2
     displayName: 'Build iOS Package'
     inputs:
@@ -129,6 +135,7 @@ jobs:
       signingIdentity: '$(APPLE_CERTIFICATE_SIGNING_IDENTITY)'
       signingProvisioningProfileID: '$(APPLE_PROV_PROFILE_UUID)'
 
+  # Copy and Publish IPA Output
   - task: CopyFiles@2
     displayName: 'Copy IPA to Staging Directory'
     condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
