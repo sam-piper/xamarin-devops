@@ -32,13 +32,13 @@ jobs:
       arguments: '-c $(BuildConfiguration) --no-restore'
 
   # Build Android package
-#  - task: android-manifest-version@1
-#    displayName: 'Update Android Version Number'
-#    inputs:
-#      sourcePath: '$(AndroidManifestPath)'
-#      versionCodeOption: 'buildid'
-#      versionCode: '$(Build.BuildId)'
-#      printFile: true
+  - task: android-manifest-version@1
+    displayName: 'Update Android Version Number'
+    inputs:
+      sourcePath: '$(AndroidManifestPath)'
+      versionCodeOption: 'buildid'
+      versionCode: '$(Build.BuildId)'
+      printFile: true
 
   - task: XamarinAndroid@1
     displayName: 'Build Android Package (Release)'
@@ -114,13 +114,13 @@ jobs:
       restoreSolution: '**/$(SolutionName)'
 
   # Update iOS Version
-#  - task: ios-bundle-version@1
-#    displayName: 'Update iOS Version Number'
-#    inputs:
-#      sourcePath: '$(AppleSettingsFileName)'
-#      versionCodeOption: 'buildid'
-#      versionCode: '$(Build.BuildId)'
-#      printFile: true
+  - task: ios-bundle-version@1
+    displayName: 'Update iOS Version Number'
+    inputs:
+      sourcePath: '$(AppleSettingsFileName)'
+      versionCodeOption: 'buildid'
+      versionCode: '$(Build.BuildId)'
+      printFile: true
 
   # Build and Sign IPA file from iOS project
   - task: XamariniOS@2
